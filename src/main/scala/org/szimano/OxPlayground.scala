@@ -1,7 +1,7 @@
 package org.szimano
 
 import com.typesafe.scalalogging.Logger
-import org.openjdk.jmh.annotations.Benchmark
+import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Mode}
 
 import java.util.concurrent.atomic.AtomicLong
 import scala.annotation.tailrec
@@ -9,12 +9,40 @@ import scala.util.Random
 
 class OxPlayground {
   @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
   def simplePlayerBenchmark(): Unit = {
+    OxPlayground.simplePlayer(OxPlayground.teams)
   }
 
   @Benchmark
-  def oxPlayerBenchmark(): Unit = {
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def oxPlayerBenchmarkSlide10k(): Unit = {
+    OxPlayground.oxPlayer(OxPlayground.teams, 10000)
   }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def oxPlayerBenchmarkSlide20k(): Unit = {
+    OxPlayground.oxPlayer(OxPlayground.teams, 20000)
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def oxPlayerBenchmarkSlide50k(): Unit = {
+    OxPlayground.oxPlayer(OxPlayground.teams, 50000)
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def oxPlayerBenchmarkSlide5k(): Unit = {
+    OxPlayground.oxPlayer(OxPlayground.teams, 5000)
+  }
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def oxPlayerBenchmarkNoSlide(): Unit = {
+    OxPlayground.oxPlayer(OxPlayground.teams, -1)
+  }
+
 }
 
 
@@ -24,15 +52,15 @@ object OxPlayground {
 
   val log = Logger("OxPlayground")
 
-  val n = 21
+  val n = 20
   val teamCount = Math.pow(2, n).toInt
+
+  import Team.*
+
+  val teams = List.fill(teamCount)(newTeam)
 
   def main(args: Array[String]): Unit = {
     log.info (s"ScalaCup Starts! The seed is ${seed}")
-
-    import Team.*
-
-    val teams = List.fill(teamCount)(newTeam)
 
     log.info(s"Playing ${teams.length} teams")
     log.debug(s"${teams}")
