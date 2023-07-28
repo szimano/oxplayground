@@ -24,7 +24,7 @@ object OxPlayground {
 
   val log = Logger("OxPlayground")
 
-  val n = 20
+  val n = 21
   val teamCount = Math.pow(2, n).toInt
 
   def main(args: Array[String]): Unit = {
@@ -49,7 +49,7 @@ object OxPlayground {
 
     val startOx = System.currentTimeMillis()
 
-    val oxResult = oxPlayer(teams)
+    val oxResult = oxPlayer(teams, 10000)
 
     val stopOx = System.currentTimeMillis()
 
@@ -66,18 +66,18 @@ object OxPlayground {
     }
   }
 
-  def oxPlayer(teams: List[Team]) : List[Team] = {
+  def oxPlayer(teams: List[Team], slider: Int) : List[Team] = {
     import ox.par
 
     val teamPairs = teams.sliding(2, 2).collect{case List(a, b) => (a, b)}.toList
 
     val matches = teamPairs.map{(teamA, teamB) => () => Match.play(teamA, teamB)}
 
-    val slider = 30000
+    val nextRound = if slider > 0 then
+      matches.sliding(slider, slider).flatMap(m => par(m)).toList
+    else par(matches).toList
 
-    val nextRound = matches.sliding(slider, slider).flatMap(m => par(m)).toList
-
-    if (nextRound.length == 1) then nextRound else oxPlayer(nextRound)
+    if (nextRound.length == 1) then nextRound else oxPlayer(nextRound, slider)
   }
 }
 
@@ -130,7 +130,7 @@ object Match {
   }
 
   private def calculateFromPower(power: Int): Double =
-    Range(0, power).map{i => (math.log(i) + math.log1p(i) + math.log10(i))/3}.sum
+    Range(0, power).map{i => math.log(i)}.sum
 
   private def olderTeam(teamA: Team, teamB: Team) : Team =
     if (teamA.number > teamB.number) then teamA else teamB
