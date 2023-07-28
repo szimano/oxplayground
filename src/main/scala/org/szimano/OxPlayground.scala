@@ -117,8 +117,8 @@ object Match {
 
     log.debug(s"PowerA = ${powerA}; PowerB = ${powerB}")
 
-    val resA = math.log(powerA)
-    val resB = math.log(powerB)
+    val resA = calculateFromPower(powerA)
+    val resB = calculateFromPower(powerB)
 
     log.debug(s"ResB = ${resA}; ResA = ${resB}")
 
@@ -128,6 +128,9 @@ object Match {
     else if (teamA.sumPower < teamB.sumPower) then teamB
     else olderTeam(teamA, teamB)
   }
+
+  private def calculateFromPower(power: Int): Double =
+    Range(0, power).map{i => (math.log(i) + math.log1p(i) + math.log10(i))/3}.sum
 
   private def olderTeam(teamA: Team, teamB: Team) : Team =
     if (teamA.number > teamB.number) then teamA else teamB
