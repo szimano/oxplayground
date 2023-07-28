@@ -1,82 +1,89 @@
 package org.szimano
 
 import com.typesafe.scalalogging.Logger
+import org.openjdk.jmh.annotations.Benchmark
 
 import java.util.concurrent.atomic.AtomicLong
 import scala.annotation.tailrec
 import scala.util.Random
 
+class OxPlayground {
+  @Benchmark
+  def simplePlayerBenchmark(): Unit = {
+  }
+
+  @Benchmark
+  def oxPlayerBenchmark(): Unit = {
+  }
+}
+
+
 object OxPlayground {
-  import ox.par
+
+  val seed = System.currentTimeMillis()
 
   val log = Logger("OxPlayground")
 
+  val n = 20
+  val teamCount = Math.pow(2, n).toInt
+
   def main(args: Array[String]): Unit = {
-    println ("Szimano rules")
+    log.info (s"ScalaCup Starts! The seed is ${seed}")
 
-
-    log.info("Starting!")
-
-    def computation1: Int =
-      Thread.sleep(2000)
-      log.info("1 finished")
-      1
-
-    def computation2: String =
-      Thread.sleep(1000)
-      log.info("2 finished")
-      "2"
-
-    val result: (Int, String) = par(computation1)(computation2)
-    // (1, "2")
-    log.info("All done!")
-
-    println(result)
-
-    import Team._
-
-    val teamA = newTeam
-    val teamB = newTeam
-
-    import Match._
-
-    val teamWon = play(teamA, teamB)
-
-    log.info(s"${teamWon} WINS! Congrats")
-
-    val n = 15
-    val teamCount = Math.pow(2, n).toInt
+    import Team.*
 
     val teams = List.fill(teamCount)(newTeam)
 
-    log.info(s"${teams}")
+    log.info(s"Playing ${teams.length} teams")
+    log.debug(s"${teams}")
+
+    val startSimple = System.currentTimeMillis()
 
     val theResult = simplePlayer(teams)
 
-    log.info(s"We have a winner! ${theResult}")
+    val stopSimple = System.currentTimeMillis()
+
+    log.info(s"We have a winner! ${theResult}. Finished in ${stopSimple - startSimple} ms")
+
+    log.info("Playing with ox!")
+
+    val startOx = System.currentTimeMillis()
+
+    val oxResult = oxPlayer(teams)
+
+    val stopOx = System.currentTimeMillis()
+
+    log.info(s"We have a winner! ${oxResult}. Finished in ${stopOx - startOx} ms")
   }
 
   @tailrec
   def simplePlayer(teams: List[Team]) : List[Team] = {
-    if ((teams.length & (teams.length - 1)) == 0) then {
-      // the length is a power of 2, a new round is played!
-      log.info("New Round!")
-      log.debug(s"${teams.map(_.number).mkString(" ")}")
-    }
+    val teamsResults = teams.sliding(2, 2).collect{case List(a, b) => (a, b)}.toList.collect(Match.play)
 
-    if (teams.length == 1) teams
+    if (teamsResults.length == 1) teamsResults
     else {
-      val (thisMatch, theRest) = teams.splitAt(2)
-      val teamWon = Match.playL(thisMatch)
-
-      simplePlayer((teamWon :: theRest.reverse).reverse)
+      simplePlayer(teamsResults)
     }
+  }
+
+  def oxPlayer(teams: List[Team]) : List[Team] = {
+    import ox.par
+
+    val teamPairs = teams.sliding(2, 2).collect{case List(a, b) => (a, b)}.toList
+
+    val matches = teamPairs.map{(teamA, teamB) => () => Match.play(teamA, teamB)}
+
+    val slider = 30000
+
+    val nextRound = matches.sliding(slider, slider).flatMap(m => par(m)).toList
+
+    if (nextRound.length == 1) then nextRound else oxPlayer(nextRound)
   }
 }
 
 object Team {
   val numGen = AtomicLong(0L)
-  val randomizer = Random(System.currentTimeMillis())
+  val randomizer = Random(OxPlayground.seed)
   def newTeam: Team = Team(numGen.getAndAdd(1L), randomizer.nextInt(100),
     randomizer.nextInt(100), randomizer.nextInt(100))
 }
