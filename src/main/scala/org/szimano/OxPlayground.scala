@@ -1,5 +1,6 @@
 package org.szimano
 
+import cats.effect.{IO, IOApp}
 import com.typesafe.scalalogging.Logger
 import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Mode}
 
@@ -43,6 +44,12 @@ class OxPlayground {
     OxPlayground.oxPlayer(OxPlayground.teams, -1)
   }
 
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def catsPlayerBenchmark(): Unit = {
+    OxPlayground.catsPlayer(OxPlayground.teams)
+  }
+
 }
 
 
@@ -52,7 +59,7 @@ object OxPlayground {
 
   val log = Logger("OxPlayground")
 
-  val n = 20
+  val n = 21
   val teamCount = Math.pow(2, n).toInt
 
   import Team.*
@@ -71,7 +78,7 @@ object OxPlayground {
 
     val stopSimple = System.currentTimeMillis()
 
-    log.info(s"We have a winner! ${theResult}. Finished in ${stopSimple - startSimple} ms")
+    log.info(s"We have a simple winner! ${theResult}. Finished in ${stopSimple - startSimple} ms")
 
     log.info("Playing with ox!")
 
@@ -81,7 +88,17 @@ object OxPlayground {
 
     val stopOx = System.currentTimeMillis()
 
-    log.info(s"We have a winner! ${oxResult}. Finished in ${stopOx - startOx} ms")
+    log.info(s"We have an ox winner! ${oxResult}. Finished in ${stopOx - startOx} ms")
+
+    log.info("Playing with cats!")
+
+    val startCats = System.currentTimeMillis()
+
+    val catsResult = catsPlayer(teams)
+
+    val stopCats = System.currentTimeMillis()
+
+    log.info(s"We have a cats winner! ${catsResult}. Finished in ${stopCats - startCats} ms")
   }
 
   @tailrec
@@ -107,6 +124,27 @@ object OxPlayground {
 
     if (nextRound.length == 1) then nextRound else oxPlayer(nextRound, slider)
   }
+
+  def catsPlayer(teams: List[Team]): List[Team] = {
+    import cats.effect.IO
+    import cats.syntax.all._
+
+    val teamPairs = teams.sliding(2, 2).collect{case List(a, b) => (a, b)}.toList
+
+    val matchesProgram = teamPairs.parTraverse { (teamA, teamB) =>
+      IO(Match.play(teamA, teamB))
+    }
+
+    import cats.effect.unsafe.implicits._
+
+    val teamsResults = matchesProgram.unsafeRunSync()
+
+    if (teamsResults.length == 1) teamsResults
+    else {
+      catsPlayer(teamsResults)
+    }
+  }
+
 }
 
 object Team {
