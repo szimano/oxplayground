@@ -1,5 +1,6 @@
 package org.szimano
 
+import cats.effect.unsafe.IORuntime
 import cats.effect.{IO, IOApp}
 import com.typesafe.scalalogging.Logger
 import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Mode}
@@ -67,9 +68,9 @@ object OxPlayground {
   val teams = List.fill(teamCount)(newTeam)
 
   def main(args: Array[String]): Unit = {
-    log.info (s"ScalaCup Starts! The seed is ${seed}")
+    println (s"ScalaCup Starts! The seed is ${seed}")
 
-    log.info(s"Playing ${teams.length} teams")
+    println(s"Playing ${teams.length} teams")
     log.debug(s"${teams}")
 
     val startSimple = System.currentTimeMillis()
@@ -78,9 +79,9 @@ object OxPlayground {
 
     val stopSimple = System.currentTimeMillis()
 
-    log.info(s"We have a simple winner! ${theResult}. Finished in ${stopSimple - startSimple} ms")
+    println(s"We have a simple winner! ${theResult}. Finished in ${stopSimple - startSimple} ms")
 
-    log.info("Playing with ox!")
+    println("Playing with ox!")
 
     val startOx = System.currentTimeMillis()
 
@@ -88,9 +89,9 @@ object OxPlayground {
 
     val stopOx = System.currentTimeMillis()
 
-    log.info(s"We have an ox winner! ${oxResult}. Finished in ${stopOx - startOx} ms")
+    println(s"We have an ox winner! ${oxResult}. Finished in ${stopOx - startOx} ms")
 
-    log.info("Playing with cats!")
+    println("Playing with cats!")
 
     val startCats = System.currentTimeMillis()
 
@@ -98,7 +99,7 @@ object OxPlayground {
 
     val stopCats = System.currentTimeMillis()
 
-    log.info(s"We have a cats winner! ${catsResult}. Finished in ${stopCats - startCats} ms")
+    println(s"We have a cats winner! ${catsResult}. Finished in ${stopCats - startCats} ms")
   }
 
   @tailrec
@@ -135,9 +136,7 @@ object OxPlayground {
       IO(Match.play(teamA, teamB))
     }
 
-    import cats.effect.unsafe.implicits._
-
-    val teamsResults = matchesProgram.unsafeRunSync()
+    val teamsResults = matchesProgram.unsafeRunSync()(IORuntime.global)
 
     if (teamsResults.length == 1) teamsResults
     else {
