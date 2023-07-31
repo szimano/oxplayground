@@ -48,7 +48,12 @@ class OxPlayground {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def catsPlayerBenchmark(): Unit = {
-    OxPlayground.catsPlayer(OxPlayground.teams)
+    OxPlayground.catsPlayer(OxPlayground.teams).unsafeRunSync()(IORuntime.global)
+  }
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def catsPlayerNonParallelBenchmark(): Unit = {
+    OxPlayground.catsPlayerTraverse(OxPlayground.teams).unsafeRunSync()(IORuntime.global)
   }
 
 }
