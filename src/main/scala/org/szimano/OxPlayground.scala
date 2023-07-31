@@ -95,11 +95,21 @@ object OxPlayground {
 
     val startCats = System.currentTimeMillis()
 
-    val catsResult = catsPlayer(teams)
+    val catsResult = catsPlayer(teams).unsafeRunSync()(IORuntime.global)
 
     val stopCats = System.currentTimeMillis()
 
     println(s"We have a cats winner! ${catsResult}. Finished in ${stopCats - startCats} ms")
+
+    println("Playing with cats non paralel!")
+
+    val startCats2 = System.currentTimeMillis()
+
+    val catsResult2 = catsPlayerTraverse(teams).unsafeRunSync()(IORuntime.global)
+
+    val stopCats2 = System.currentTimeMillis()
+
+    println(s"We have a cats non-par winner! ${catsResult2}. Finished in ${stopCats2 - startCats2} ms")
   }
 
   @tailrec
@@ -126,21 +136,38 @@ object OxPlayground {
     if (nextRound.length == 1) then nextRound else oxPlayer(nextRound, slider)
   }
 
-  def catsPlayer(teams: List[Team]): List[Team] = {
+  def catsPlayer(teams: List[Team]): IO[List[Team]] = {
     import cats.effect.IO
     import cats.syntax.all._
 
-    val teamPairs = teams.sliding(2, 2).collect{case List(a, b) => (a, b)}.toList
+    val teamPairs = teams.sliding(2, 2).collect { case List(a, b) => (a, b) }.toList
 
     val matchesProgram = teamPairs.parTraverse { (teamA, teamB) =>
       IO(Match.play(teamA, teamB))
     }
 
-    val teamsResults = matchesProgram.unsafeRunSync()(IORuntime.global)
+    matchesProgram.flatMap{ teamsResults =>
+      if (teamsResults.length == 1) then IO.pure(teamsResults)
+      else {
+        catsPlayer(teamsResults)
+      }
+    }
+  }
+  def catsPlayerTraverse(teams: List[Team]): IO[List[Team]] = {
+    import cats.effect.IO
+    import cats.syntax.all._
 
-    if (teamsResults.length == 1) teamsResults
-    else {
-      catsPlayer(teamsResults)
+    val teamPairs = teams.sliding(2, 2).collect { case List(a, b) => (a, b) }.toList
+
+    val matchesProgram = teamPairs.traverse { (teamA, teamB) =>
+      IO(Match.play(teamA, teamB))
+    }
+
+    matchesProgram.flatMap { teamsResults =>
+      if (teamsResults.length == 1) then IO.pure(teamsResults)
+      else {
+        catsPlayerTraverse(teamsResults)
+      }
     }
   }
 
